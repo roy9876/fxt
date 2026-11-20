@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank of Canada Exchange Rates</title>
+    
+    <!-- DataTables Official v2 CSS Stylesheet -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.8/css/dataTables.dataTables.css">
+    <!-- Flag Icons CSS from jsDelivr (same CDN as jQuery) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/css/flag-icons.min.css" />
+
+    <!-- Structural Page Layout Rules -->
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 24px 24px 60px 24px;
+            color: #212529;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-top: 0;
+            margin-bottom: 8px;
+            color: #0f2c59;
+        }
+        h2 {
+            font-size: 1.2rem;
+            margin-top: 0;
+            margin-bottom: 6px;
+            color: #0f2c59;
+        }
+        .subtitle {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-bottom: 24px;
+        }
+        /* Flag styling */
+        .flag-icon {
+            font-size: 1.35rem;
+            border-radius: 2px;
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+            display: block;
+            margin: 0 auto;
+        }
+        /* Custom formatting rules for percentage metrics */
+        .pos-trend {
+            color: #198754;
+            font-weight: 600;
+        }
+        .neg-trend {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        .neutral-trend {
+            color: #6c757d;
+        }
+        /* Toggle Button & Indented C$100 Section */
+        .toggle-section {
+            margin-top: 28px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        .toggle-btn {
+            background-color: #0f2c59;
+            color: #ffffff;
+            border: none;
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .toggle-btn:hover {
+            background-color: #1a4380;
+        }
+        .cad100-wrapper {
+            display: none;
+            margin-top: 20px;
+            margin-left: 32px;
+            padding: 20px;
+            background-color: #fafbfc;
+            border-left: 4px solid #0f2c59;
+            border-radius: 0 6px 6px 0;
+        }
+        .highlight-major {
+            font-weight: 700;
+            color: #0f2c59;
+        }
+        /* Discreet Bottom-Right Refresh Button */
+        .refresh-btn {
+            position: fixed;
+            bottom: 14px;
+            right: 16px;
+            background-color: #ffffff;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            opacity: 0.45;
+            transition: opacity 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+            z-index: 999;
+        }
+        .refresh-btn:hover {
+            opacity: 1;
+            color: #0f2c59;
+            border-color: #adb5bd;
+        }
+        /* Mobile-friendly adjustments for phones */
+        @media (max-width: 600px) {
+            body {
+                padding: 12px 12px 56px 12px;
+            }
+            .container {
+                padding: 16px;
+            }
+            .cad100-wrapper {
+                margin-left: 8px;
+                padding: 12px;
+            }
+            .toggle-btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Bank of Canada Daily Exchange Rates</h1>
+        <div id="dateLog" class="subtitle">Processing active exchange parameters...</div>
+        
+        <!-- Primary DataTables Container -->
+        <table id="currencyTable" class="display" style="width:100%">
+            <thead>
+                <tr>
+                    <th style="text-align: center;">Flag</th>
+                    <th>Currency Pair</th>
+                    <th>Current Rate</th>
+                    <th>Yesterday</th>
+                    <th>Daily %</th>
+                    <th>Week Ago</th>
+                    <th>Weekly %</th>
+                    <th>Month Ago</th>
+                    <th>Monthly %</th>
+                    <th>Year Ago</th>
+                    <th>Yearly %</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <!-- Collapsible Secondary C$100 Conversion Section -->
+        <div class="toggle-section">
+            <button id="toggleCad100Btn" class="toggle-btn" type="button">
+                See how much C$100 (Canadian Dollars) are worth...
+            </button>
+
+            <div id="cad100Wrapper" class="cad100-wrapper">
+                <h2>Value of C$100 (Canadian Dollars) in Foreign Currencies</h2>
+                <div class="subtitle" style="margin-bottom: 16px;">
+                    Calculated from current Bank of Canada rates (C$100 &divide; Exchange Rate). Major currencies highlighted in bold.
+                </div>
+                <table id="cad100Table" class="display" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th style="text-align: center;">Flag</th>
+                            <th>Currency Pair</th>
+                            <th>C$100 Equals</th>
+                            <th>Current Rate (to CAD)</th>
+                            <th>Country &amp; Currency</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Discreet Bottom-Right Cache Refresh Button -->
+    <button id="refreshCacheBtn" class="refresh-btn" type="button" title="Clear browser cache and fetch latest Bank of Canada rates">
+        &#x21bb; Refresh Rates
+    </button>
+
+
+    <!-- Required Script Foundations -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.datatables.net/2.3.8/js/dataTables.js"></script>
+
+    <script>
+    // 1. Establish Temporal Reference Points (EST Boundary Engine)
+    const estString = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+    const estDate = new Date(estString);
+    const estHour = estDate.getHours();
+
+    let baseDate = new Date(estString);
+    if (estHour < 18) {
+        baseDate.setDate(baseDate.getDate() - 1);
+    }
+
+    const endDateStr = baseDate.toISOString().split('T')[0];
+
+    const getPastDateString = (daysAgo, monthsAgo, yearsAgo) => {
+        const d = new Date(endDateStr + 'T00:00:00');
+        if (daysAgo) d.setDate(d.getDate() - daysAgo);
+        if (monthsAgo) d.setMonth(d.getMonth() - monthsAgo);
+        if (yearsAgo) d.setFullYear(d.getFullYear() - yearsAgo);
+        return d.toISOString().split('T')[0];
+    };
+
+    const targetDates = {
+        today: endDateStr,
+        yesterday: getPastDateString(1, 0, 0),
+        weekAgo: getPastDateString(7, 0, 0),
+        monthAgo: getPastDateString(0, 1, 0),
+        yearAgo: getPastDateString(0, 0, 1)
+    };
+
+    // Map 3-letter Bank of Canada currency codes to 2-letter ISO country codes
+    const currencyToCountry = {
+        AUD: 'au', BRL: 'br', CHF: 'ch', CNY: 'cn', EUR: 'eu',
+        GBP: 'gb', HKD: 'hk', IDR: 'id', INR: 'in', JPY: 'jp',
+        KRW: 'kr', MXN: 'mx', MYR: 'my', NOK: 'no', NZD: 'nz',
+        PEN: 'pe', PLN: 'pl', RUB: 'ru', SAR: 'sa', SEK: 'se',
+        SGD: 'sg', THB: 'th', TRY: 'tr', TWD: 'tw', USD: 'us',
+        VND: 'vn', ZAR: 'za'
+    };
+
+    // Currency symbols for the C$100 conversion table
+    const currencySymbols = {
+        AUD: 'A$', BRL: 'R$', CHF: 'CHF ', CNY: '¥', EUR: '€',
+        GBP: '£', HKD: 'HK$', IDR: 'Rp ', INR: '₹', JPY: '¥',
+        KRW: '₩', MXN: 'Mex$', MYR: 'RM ', NOK: 'kr ', NZD: 'NZ$',
+        PEN: 'S/ ', PLN: 'zł ', RUB: '₽', SAR: 'SAR ', SEK: 'kr ',
+        SGD: 'S$', THB: '฿', TRY: '₺', TWD: 'NT$', USD: 'US$',
+        VND: '₫', ZAR: 'R '
+    };
+
+        // Full country & currency names for the C$100 conversion table
+    const currencyNames = {
+        AUD: 'Australian Dollar',
+        BRL: 'Brazilian Real',
+        CHF: 'Swiss Franc',
+        CNY: 'Chinese Renminbi (Yuan)',
+        EUR: 'Eurozone Euro',
+        GBP: 'British Pound Sterling',
+        HKD: 'Hong Kong Dollar',
+        IDR: 'Indonesian Rupiah',
+        INR: 'Indian Rupee',
+        JPY: 'Japanese Yen',
+        KRW: 'South Korean Won',
+        MXN: 'Mexican Peso',
+        MYR: 'Malaysian Ringgit',
+        NOK: 'Norwegian Krone',
+        NZD: 'New Zealand Dollar',
+        PEN: 'Peruvian Sol',
+        PLN: 'Polish Zloty',
+        RUB: 'Russian Ruble',
+        SAR: 'Saudi Riyal',
+        SEK: 'Swedish Krona',
+        SGD: 'Singapore Dollar',
+        THB: 'Thai Baht',
+        TRY: 'Turkish Lira',
+        TWD: 'New Taiwan Dollar',
+        USD: 'United States Dollar',
+        VND: 'Vietnamese Dong',
+        ZAR: 'South African Rand'
+    };
+
+    // Major currencies to highlight in bold in the C$100 table
+    const majorCurrencies = new Set(['CNY', 'EUR', 'GBP', 'INR', 'JPY', 'USD']);
+
+    const getCurrencyCode = (seriesId) => seriesId.replace(/^FX/, '').replace(/CAD$/, '');
+
+    const getFlagHtml = (currencyCode, label) => {
+        const countryCode = currencyToCountry[currencyCode];
+        if (!countryCode) return '';
+        return `<span class="fi fi-${countryCode} flag-icon" title="${label}"></span>`;
+    };
+
+    let primaryDataTable = null;
+    let cad100DataTable = null;
+
+    // 2. Render Both Tables from Single JSON Payload
+    const renderExchangeTables = (json, sourceLabel) => {
+        document.getElementById('dateLog').innerText = 
+            `Displaying historical metrics relative to baseline: ${endDateStr} (EST) • Source: ${sourceLabel}`;
+
+        const series = json.seriesDetail;
+        const observations = json.observations;
+
+        const obsMap = {};
+        observations.forEach(obs => {
+            obsMap[obs.d] = obs;
+        });
+
+        const lookupRate = (seriesId, initialTargetDate) => {
+            let check = new Date(initialTargetDate + 'T00:00:00');
+            for (let i = 0; i < 10; i++) {
+                const key = check.toISOString().split('T')[0];
+                if (obsMap[key] && obsMap[key][seriesId]) {
+                    return parseFloat(obsMap[key][seriesId].v);
+                }
+                check.setDate(check.getDate() - 1);
+            }
+            return null;
+        };
+
+        const calculateTrendMetric = (current, historical) => {
+            if (!current || !historical) return `<span class="neutral-trend">N/A</span>`;
+            const delta = ((current - historical) / historical) * 100;
+            const formatted = delta.toFixed(2) + "%";
+            
+            if (delta > 0) return `<span class="pos-trend">+${formatted}</span>`;
+            if (delta < 0) return `<span class="neg-trend">${formatted}</span>`;
+            return `<span class="neutral-trend">${formatted}</span>`;
+        };
+
+        const primaryRows = [];
+        const cad100Rows = [];
+
+        Object.keys(series).forEach(id => {
+            const label = series[id].label.replace(" to CAD", "");
+            const code = getCurrencyCode(id);
+            const flagHtml = getFlagHtml(code, label);
+            
+            const curRate = lookupRate(id, targetDates.today);
+            const yestRate = lookupRate(id, targetDates.yesterday);
+            const weekRate = lookupRate(id, targetDates.weekAgo);
+            const monthRate = lookupRate(id, targetDates.monthAgo);
+            const yearRate = lookupRate(id, targetDates.yearAgo);
+
+            // Row for Table 1 (Historical Exchange Rates)
+            primaryRows.push([
+                flagHtml,
+                label,
+                curRate ? curRate.toFixed(4) : "N/A",
+                yestRate ? yestRate.toFixed(4) : "N/A",
+                calculateTrendMetric(curRate, yestRate),
+                weekRate ? weekRate.toFixed(4) : "N/A",
+                calculateTrendMetric(curRate, weekRate),
+                monthRate ? monthRate.toFixed(4) : "N/A",
+                calculateTrendMetric(curRate, monthRate),
+                yearRate ? yearRate.toFixed(4) : "N/A",
+                calculateTrendMetric(curRate, yearRate)
+            ]);
+
+            // Row for Table 2 (C$100 Equivalent Conversion)
+            const isMajor = majorCurrencies.has(code);
+            const symbol = currencySymbols[code] || '';
+            const fullName = currencyNames[code] || code;
+            const convertedVal = curRate 
+                ? `${symbol}${(100 / curRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${code}`
+                : "N/A";
+
+            const formattedLabel = isMajor ? `<span class="highlight-major">${label}</span>` : label;
+            const formattedName = isMajor ? `<span class="highlight-major">${fullName}</span>` : fullName;
+            const formattedRate = curRate ? (isMajor ? `<span class="highlight-major">${curRate.toFixed(4)}</span>` : curRate.toFixed(4)) : "N/A";
+            const formattedConverted = isMajor ? `<span class="highlight-major">${convertedVal}</span>` : convertedVal;
+
+            cad100Rows.push([
+                flagHtml,
+                formattedLabel,
+                formattedConverted,                
+                formattedRate,
+                formattedName                
+            ]);
+        });
+
+        // Destroy existing DataTables instances if re-rendering on manual refresh
+        if (primaryDataTable) primaryDataTable.destroy();
+        if (cad100DataTable) cad100DataTable.destroy();
+
+        primaryDataTable = new DataTable('#currencyTable', {
+            data: primaryRows,
+            pageLength: 25,
+            order: [[1, "asc"]],
+            responsive: true,
+            columnDefs: [
+                { orderable: false, searchable: false, targets: 0, width: "50px" }
+            ]
+        });
+
+        cad100DataTable = new DataTable('#cad100Table', {
+            data: cad100Rows,
+            pageLength: 25,
+            order: [[1, "asc"]],
+            responsive: true,
+            columnDefs: [
+                { orderable: false, searchable: false, targets: 0, width: "50px" }
+            ]
+        });
+    };
+
+    // 3. 12-Hour LocalStorage Cache Controller
+    //    const url = `https://www.bankofcanada.ca/valet/observations/group/FX_RATES_DAILY/json?start_date=2025-01-01&end_date=2027-01-01`;
+
+    const CACHE_KEY = 'boc_fx_rates_cache_v1';
+    const CACHE_TTL_MS = 12 * 60 * 60 * 1000;                  // 12 hours in milliseconds
+    const apiBase = 'https://www.bankofcanada.ca/valet/observations/group/FX_RATES_DAILY/json';
+    //const url = `${apiBase}?start_date=2025-01-01&end_date=2027-01-01`;
+
+    // Fetch ~13 months of data (1 year + 15-day holiday buffer) up to the active baseline date
+    const startDateStr = getPastDateString(15, 0, 1);
+    const url = `${apiBase}?start_date=${startDateStr}&end_date=${endDateStr}`;
+
+
+    const loadExchangeData = async (forceRefresh = false) => {
+        if (!forceRefresh) {
+            try {
+                const cachedRaw = localStorage.getItem(CACHE_KEY);
+                if (cachedRaw) {
+                    const cached = JSON.parse(cachedRaw);
+                    const isFresh = (Date.now() - cached.timestamp) < CACHE_TTL_MS;
+                    const isSameBaseline = cached.baselineDate === endDateStr;
+
+                    if (isFresh && isSameBaseline && cached.data) {
+                        const cachedTime = new Date(cached.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        renderExchangeTables(cached.data, `Browser Cache (saved at ${cachedTime})`);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn("Cache read failed, falling back to live API:", e);
+            }
+        }
+
+        try {
+            document.getElementById('dateLog').innerText = "Fetching latest closing rates from Bank of Canada...";
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP Error Status Code: ${response.status}`);
+            const json = await response.json();
+
+            try {
+                localStorage.setItem(CACHE_KEY, JSON.stringify({
+                    timestamp: Date.now(),
+                    baselineDate: endDateStr,
+                    data: json
+                }));
+            } catch (storageErr) {
+                console.warn("Unable to write to localStorage:", storageErr);
+            }
+
+            renderExchangeTables(json, "Live Bank of Canada API");
+        } catch (error) {
+            console.error("Detailed Pipeline Exception Stack Trace:", error);
+            document.getElementById('dateLog').innerText = "Failed to load exchange rate matrix data. Reference your console log output to inspect structural root errors.";
+        }
+    };
+
+    // 4. Event Listeners for Toggle & Manual Refresh
+    const toggleBtn = document.getElementById('toggleCad100Btn');
+    const cad100Wrapper = document.getElementById('cad100Wrapper');
+
+    toggleBtn.addEventListener('click', () => {
+        const isHidden = cad100Wrapper.style.display === 'none' || cad100Wrapper.style.display === '';
+        if (isHidden) {
+            cad100Wrapper.style.display = 'block';
+            toggleBtn.innerText = 'Hide C$100 conversion table';
+            if (cad100DataTable) {
+                cad100DataTable.columns.adjust().draw(false);
+            }
+        } else {
+            cad100Wrapper.style.display = 'none';
+            toggleBtn.innerText = 'See how much C$100 (Canadian Dollars) are worth...';
+        }
+    });
+
+    document.getElementById('refreshCacheBtn').addEventListener('click', () => {
+        localStorage.removeItem(CACHE_KEY);
+        loadExchangeData(true);
+    });
+
+    // Initial Load
+    loadExchangeData();
+    </script>
+</body>
+</html>
+
+
